@@ -47,9 +47,9 @@ import org.apache.flink.connector.jdbc.JdbcSink;
 public class DataStreamJob {
     private static final String KAFKA_BROKER = "localhost:9092";
     private static final String TRANSACTION_TOPIC = "financial_transactions";
-    private static final String jdbcUrl = "jdbc:postgresql://localhost:5432/transactions";
-    private static final String username = "admin";
-    private static final String password = "admin";
+    private static final String jdbcUrl = "jdbc:postgresql://localhost:5432/";
+    private static final String username = "postgres";
+    private static final String password = "postgres";
 
     public static void main(String[] args) throws Exception {
         // Sets up the execution environment, which is the main entry point
@@ -105,8 +105,7 @@ public class DataStreamJob {
                         "customer_id VARCHAR(255)," +
                         "transaction_date TIMESTAMP," +
                         "payment_method VARCHAR(255)," +
-                        "currency VARCHAR(255)," +
-                        ")",
+                        "currency VARCHAR(255))",
                 (JdbcStatementBuilder<Transaction>) (ps, transaction) -> {
 
                 },
@@ -114,7 +113,42 @@ public class DataStreamJob {
                 connectionOptions
         ));
 
-
-        env.execute("Flink Java API Skeleton");
+        // Insert transactions into the table
+        transactionStream.addSink(JdbcSink.sink(
+                "INSERT INTO transactions (transaction_id, product_id, product_name, " +
+                        "product_category, product_quantity, product_price, " +
+                        "product_brand, total_amount, customer_id, transaction_date, " +
+                        "payment_method, currency) " +
+                        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)" +
+                        "ON CONFLICT (transaction_id) DO UPDATE SET " +
+                        "product_id = EXCLUDED.product_id, " +
+                        "product_name = EXCLUDED.product_name, " +
+                        "product_category = EXCLUDED.product_category, " +
+                        "product_quantity = EXCLUDED.product_quantity, " +
+                        "product_price = EXCLUDED.product_price, " +
+                        "product_brand = EXCLUDED.product_brand, " +
+                        "total_amount = EXCLUDED.total_amount, " +
+                        "customer_id = EXCLUDED.customer_id, " +
+                        "transaction_date = EXCLUDED.transaction_date, " +
+                        "payment_method = EXCLUDED.payment_method, " +
+                        "currency = EXCLUDED.currency",
+                (JdbcStatementBuilder<Transaction>) (ps, transaction) -> {
+                    ps.setString(1, transaction.getTransactionId());
+                    ps.setString(2, transaction.getProductId());
+                    ps.setString(3, transaction.getProductName());
+                    ps.setString(4, transaction.getProductCategory());
+                    ps.setInt(5, transaction.getProductQuantity());
+                    ps.setDouble(6, transaction.getProductPrice());
+                    ps.setString(7, transaction.getProductBrand());
+                    ps.setDouble(8, transaction.getTotalAmount());
+                    ps.setString(9, transaction.getCustomerId());
+                    ps.setTimestamp(10, transaction.getTransactionDate());
+                    ps.setString(11, transaction.getPaymentMethod());
+                    ps.setString(12, transaction.getCurrency());
+                },
+                executionOptions,
+                connectionOptions
+        )).name("Insert into  transactions table sink");
+        env.execute("Flink Java real-time financial transactions processing job");
     }
 }
