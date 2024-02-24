@@ -4,15 +4,17 @@ services:
   postgres:
     image: postgres:14
     environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
     healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "airflow" ]
+      test: [ "CMD", "pg_isready", "-U", "postgres" ]
       interval: 10s
       retries: 5
       start_period: 5s
     restart: always
+    ports:
+      - "5432:5432"
   broker:
     image: confluentinc/cp-kafka:7.5.3
     hostname: broker
